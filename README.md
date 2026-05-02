@@ -1,120 +1,92 @@
-# 🧠 Desafio Técnico – Backend (Node.js API)
+# Desafio Tecnico - Backend Node.js API
 
-## 🎯 Objetivo
+API REST para cadastro, consulta e analise de dados de especies.
 
-Desenvolver uma API REST para gerenciamento e análise de dados de espécies, simulando um cenário real de aplicações da SIAPESQ.
+## Stack
 
-- **Período para execução:** 27 de abril até 7 de maio
+- Bun
+- Express
+- TypeScript
+- Prisma
+- PostgreSQL via Docker
+- Zod
+- JWT
 
----
+## Como Rodar
 
-## 🧠 Requisitos
+1. Instale as dependencias:
 
-### 🔹 Tecnologias
+```bash
+bun install
+```
 
-- Node.js  
-- JavaScript ou TypeScript (preferencialmente TypeScript)  
-- Banco de dados SQL (PostgreSQL/MySQL) ou NoSQL (MongoDB)  
+2. Configure o ambiente:
 
----
+```bash
+cp .env.example .env
+```
 
-## 📌 Descrição do Desafio
+3. Suba o PostgreSQL:
 
-Você deve desenvolver uma API REST que contemple as seguintes funcionalidades:
+```bash
+docker compose up -d
+```
 
----
+4. Gere o Prisma Client e rode as migrations:
 
-### 🔹 1. Cadastro de Espécies
+```bash
+bun run db:generate
+bun run db:migrate
+```
 
-Cada espécie deve conter:
+5. Inicie a API:
 
-- Nome comum  
-- Nome científico  
-- Categoria (ex: ave, peixe, planta)  
-- Localização (latitude e longitude)  
-- Data de registro  
+```bash
+bun run dev
+```
 
----
+A API fica disponivel em `http://localhost:3333`.
 
-### 🔹 2. Consulta de Dados
+## Endpoints
 
-Criar endpoints para:
+### Health
 
-- Listar todas as espécies  
-- Filtrar por categoria  
-- Buscar por nome  
-- Retornar estatísticas (ex: quantidade por categoria)  
+- `GET /health`
 
----
+### Autenticacao
 
-### 🔹 3. Integração com API Externa
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/me`
 
-Consumir uma API pública (ex: clima, geolocalização, etc.) e:
+### Especies
 
-- Associar dados externos ao registro da espécie  
+- `GET /api/species`
+- `GET /api/species?category=ave`
+- `GET /api/species?q=tilapia`
+- `GET /api/species/stats`
+- `GET /api/species/:id`
+- `POST /api/species`
+- `PUT /api/species/:id`
+- `DELETE /api/species/:id`
 
----
+As rotas de escrita de especies precisam de `Authorization: Bearer <token>`.
 
-### 🔹 4. Autenticação
+## Exemplo de Cadastro de Especie
 
-Implementar autenticação utilizando:
+```json
+{
+  "commonName": "Tilapia",
+  "scientificName": "Oreochromis niloticus",
+  "category": "peixe",
+  "latitude": -3.7319,
+  "longitude": -38.5267,
+  "recordedAt": "2026-05-02T20:00:00.000Z"
+}
+```
 
-- JWT  
-- Login simples (email e senha)  
+## Proximos Passos
 
----
-
-### 🔹 5. Banco de Dados
-
-Utilizar uma das opções:
-
-- SQL (PostgreSQL ou MySQL)  
-- NoSQL (MongoDB)  
-
----
-
-### 🔹 6. Testes (Diferencial)
-
-- Testes unitários ou de integração  
-
----
-
-## 📦 Entregáveis
-
-- Código no GitHub  
-- README com instruções de execução  
-- Collection do Postman ou Insomnia (opcional)  
-
----
-
-## 🧪 Critérios de Avaliação
-
-| Critério                         | Peso |
-|--------------------------------|------|
-| Arquitetura e organização       | 25% |
-| Funcionalidades implementadas   | 20% |
-| Boas práticas (clean code)      | 15% |
-| Segurança (validação + auth)    | 15% |
-| Uso correto de HTTP             | 10% |
-| Integração com API externa      | 10% |
-| Testes (diferencial)            | 5%  |
-
----
-
-## ⚠️ Observações
-
-- O desafio **não precisa estar 100% completo** para ser avaliado  
-- O foco principal será:
-  - Organização do código  
-  - Raciocínio técnico  
-  - Boas práticas  
-- Diferenciais são opcionais, mas valorizados  
-
----
-
-## 👤 Contato
-
-Em caso de dúvidas, entre em contato:
-
-- **Theodor:** (55) 53 99146-9520 (WhatsApp)  
-- **Email:** siapesq@gmail.com  
+- Escolher a API publica externa e preencher `ExternalDataService`.
+- Adicionar testes unitarios ou de integracao.
+- Opcionalmente criar uma collection do Insomnia/Postman.
