@@ -11,6 +11,7 @@ const categorySchema = z
 
 const latitudeSchema = z.coerce.number().min(-90).max(90);
 const longitudeSchema = z.coerce.number().min(-180).max(180);
+const recordedAtSchema = z.coerce.date();
 
 export const speciesIdParamSchema = z.object({
   id: z.string().uuid(),
@@ -22,10 +23,19 @@ export const createSpeciesSchema = z.object({
   category: categorySchema,
   latitude: latitudeSchema,
   longitude: longitudeSchema,
-  recordedAt: z.coerce.date().default(() => new Date()),
+  recordedAt: recordedAtSchema.default(() => new Date()),
 });
 
-export const updateSpeciesSchema = createSpeciesSchema.partial();
+export const updateSpeciesSchema = z
+  .object({
+    commonName: nameSchema,
+    scientificName: nameSchema,
+    category: categorySchema,
+    latitude: latitudeSchema,
+    longitude: longitudeSchema,
+    recordedAt: recordedAtSchema,
+  })
+  .partial();
 
 export const listSpeciesQuerySchema = z.object({
   category: categorySchema.optional(),

@@ -78,17 +78,23 @@ export const SpeciesService = {
 
   async update(id: string, input: UpdateSpeciesInput) {
     await this.findById(id);
+    const externalData = input.scientificName
+      ? await ExternalDataService.getSpeciesData({ scientificName: input.scientificName })
+      : undefined;
 
     return prisma.species.update({
       where: { id },
-      data: input,
+      data: {
+        ...input,
+        externalData: externalData ?? undefined,
+      },
     });
   },
 
   async delete(id: string) {
     await this.findById(id);
 
-    await prisma.species.delete({
+    return prisma.species.delete({
       where: { id },
     });
   },

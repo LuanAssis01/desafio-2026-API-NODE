@@ -43,9 +43,12 @@ export const SpeciesController = {
   async delete(request: Request, response: Response) {
     const { id } = request.params as SpeciesIdParam;
 
-    await SpeciesService.delete(id);
+    const species = await SpeciesService.delete(id);
 
-    response.status(204).send();
+    response.status(200).json({
+      message: "Especie removida com sucesso.",
+      species,
+    });
   },
 
   async stats(_request: Request, response: Response) {

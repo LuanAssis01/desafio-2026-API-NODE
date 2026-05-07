@@ -1,6 +1,8 @@
 # Desafio Tecnico - Backend Node.js API
 
-API REST para cadastro, consulta e analise de dados de especies.
+API REST para cadastro, consulta e analise de dados de especies, com
+autenticacao JWT, persistencia em PostgreSQL e enriquecimento de dados pela API
+publica do GBIF.
 
 ## Stack
 
@@ -8,9 +10,42 @@ API REST para cadastro, consulta e analise de dados de especies.
 - Express
 - TypeScript
 - Prisma
-- PostgreSQL via Docker
+- PostgreSQL hospedado
 - Zod
 - JWT
+
+## Como Estruturamos o Desafio
+
+A solucao foi organizada de forma simples, separando cada responsabilidade em
+uma camada pequena:
+
+- `routes`: definem os endpoints HTTP e aplicam middlewares.
+- `middlewares`: cuidam de autenticacao, validacao, erros e rotas assincronas.
+- `controllers`: recebem a requisicao validada e devolvem a resposta.
+- `services`: concentram as regras da aplicacao, chamadas ao Prisma e consulta
+  externa ao GBIF.
+- `valueObjects`: guardam os schemas Zod e os tipos derivados deles.
+- `lib`: reune configuracao de ambiente, Prisma Client, JWT e erro HTTP.
+- `prisma`: contem o schema do banco e as migrations.
+
+O fluxo principal fica assim: a request entra por uma rota, passa pela validacao
+com Zod, chega ao controller e o controller delega a regra para um service. O
+service grava ou consulta o PostgreSQL pelo Prisma e, quando uma especie e
+cadastrada ou tem o nome cientifico alterado, consulta o GBIF para salvar os
+dados externos em `externalData`.
+
+A autenticacao foi mantida objetiva: cadastro e login retornam um JWT; as rotas
+de escrita de especies exigem `Authorization: Bearer <token>`. Qualquer usuario
+autenticado pode criar, editar ou remover especies, sem regra de ownership por
+criador, para nao aumentar a complexidade do desafio.
+
+O banco usado no projeto e um PostgreSQL hospedado na Hostinger via Dokploy. Por
+isso o projeto depende apenas do `DATABASE_URL` no `.env` e nao mantem
+`docker-compose.yml` para banco local.
+
+Para validar a entrega, adicionamos testes automatizados para schemas,
+middlewares, JWT e integracao GBIF com `fetch` mockado. Tambem existe uma
+collection Postman para testar o fluxo da API e chamadas externas ao GBIF.
 
 ## Como Rodar
 
@@ -26,26 +61,63 @@ bun install
 cp .env.example .env
 ```
 
-3. Suba o PostgreSQL:
+3. Ajuste o `DATABASE_URL` no `.env`.
 
-```bash
-docker compose up -d
-```
+O projeto usa um banco PostgreSQL hospedado. Configure o `DATABASE_URL` com a
+string de conexao do banco provisionado na Hostinger via Dokploy.
 
-4. Gere o Prisma Client e rode as migrations:
+4. Gere o Prisma Client:
 
 ```bash
 bun run db:generate
+```
+
+5. Rode as migrations quando o banco ainda nao estiver migrado:
+
+```bash
+bun run db:deploy
+```
+
+Em ambiente de desenvolvimento onde voce controla o banco, tambem pode usar:
+
+```bash
 bun run db:migrate
 ```
 
-5. Inicie a API:
+6. Inicie a API:
 
 ```bash
 bun run dev
 ```
 
 A API fica disponivel em `http://localhost:3333`.
+
+## Testes
+
+```bash
+bun test
+bun run typecheck
+bun run test:gbif
+```
+
+Os testes atuais cobrem schemas Zod, JWT, middlewares principais e o servico de
+integracao com o GBIF usando `fetch` mockado.
+O `test:gbif` faz uma chamada real para o GBIF usando o
+`ExternalDataService`; por padrao testa `Oreochromis niloticus`.
+Voce tambem pode passar outro nome cientifico:
+
+```bash
+bun run test:gbif "Panthera onca"
+```
+
+## Collection Postman
+
+Existe uma collection para testar healthcheck, autenticacao, CRUD de especies e
+as consultas externas ao GBIF:
+
+```text
+postman/desafio-2026-api-node.postman_collection.json
+```
 
 ## Endpoints
 
@@ -71,6 +143,8 @@ A API fica disponivel em `http://localhost:3333`.
 - `DELETE /api/species/:id`
 
 As rotas de escrita de especies precisam de `Authorization: Bearer <token>`.
+Qualquer usuario autenticado pode criar, editar ou remover especies; nao ha
+restricao para que apenas o criador altere o proprio registro.
 
 ## Exemplo de Cadastro de Especie
 
@@ -85,8 +159,30 @@ As rotas de escrita de especies precisam de `Authorization: Bearer <token>`.
 }
 ```
 
+## Integracao Externa
+
+O projeto usa a API publica do GBIF para enriquecer os registros de especies.
+Ao cadastrar uma especie ou atualizar seu nome cientifico, o
+`ExternalDataService` consulta:
+
+- `GET /species/match`: resolve o nome cientifico na taxonomia do GBIF.
+- `GET /occurrence/search?limit=0`: busca somente a contagem de ocorrencias do
+  taxon encontrado, sem baixar registros.
+
+O resultado e salvo em `Species.externalData`.
+
+Docs: https://techdocs.gbif.org/en/openapi/
+
+Variaveis opcionais:
+
+```env
+GBIF_API_BASE_URL="https://api.gbif.org/v1"
+GBIF_USER_AGENT="desafio-2026-api-node/1.0 (contato: seu-email@example.com)"
+```
+
+O GBIF recomenda definir um `User-Agent` identificavel, preferencialmente com
+URL ou email de contato.
+
 ## Proximos Passos
 
-- Escolher a API publica externa e preencher `ExternalDataService`.
-- Adicionar testes unitarios ou de integracao.
-- Opcionalmente criar uma collection do Insomnia/Postman.
+- Opcionalmente adicionar testes de integracao para rotas HTTP com banco.

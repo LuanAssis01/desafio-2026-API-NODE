@@ -2,7 +2,7 @@
 
 ## Contexto do Projeto
 
-Este projeto e uma API REST para o desafio tecnico de backend da SIAPESQ. O objetivo e gerenciar e analisar dados de especies, com cadastro, consultas, estatisticas, autenticacao JWT, banco relacional e uma futura integracao com API publica externa.
+Este projeto e uma API REST para o desafio tecnico de backend da SIAPESQ. O objetivo e gerenciar e analisar dados de especies, com cadastro, consultas, estatisticas, autenticacao JWT, banco relacional e integracao com a API publica do GBIF.
 
 O foco atual e deixar a base bem organizada, simples de evoluir e com as responsabilidades separadas.
 
@@ -13,7 +13,7 @@ O foco atual e deixar a base bem organizada, simples de evoluir e com as respons
 - Linguagem: TypeScript
 - ORM: Prisma
 - Banco: PostgreSQL
-- Banco local: Docker Compose
+- Banco hospedado: Hostinger via Dokploy
 - Validacao: Zod
 - Autenticacao: JWT
 - Hash de senha: `Bun.password` com Argon2
@@ -30,7 +30,6 @@ bun run typecheck
 Comandos do banco e Prisma:
 
 ```bash
-docker compose up -d
 bun run db:generate
 bun run db:migrate
 bun run db:deploy
@@ -45,9 +44,11 @@ Exemplo em `.env.example`:
 
 ```env
 PORT=3333
-DATABASE_URL="postgresql://desafio:desafio@localhost:5432/especies?schema=public"
+DATABASE_URL="postgresql://usuario:senha@host:5432/database?schema=public"
 JWT_SECRET="troque-este-segredo-em-producao-com-pelo-menos-32-caracteres"
 JWT_EXPIRES_IN_SECONDS=86400
+GBIF_API_BASE_URL="https://api.gbif.org/v1"
+GBIF_USER_AGENT="desafio-2026-api-node/1.0 (contato: seu-email@example.com)"
 ```
 
 O arquivo `.env` e ignorado pelo Git.
@@ -68,7 +69,6 @@ src/
 prisma/
   schema.prisma
   migrations/
-docker-compose.yml
 ```
 
 Responsabilidades:
@@ -116,7 +116,7 @@ Campos principais:
 - `createdAt`
 - `updatedAt`
 
-`externalData` e `Json?` porque a API publica externa ainda sera escolhida.
+`externalData` e `Json?` e armazena os dados retornados pela API do GBIF.
 
 ## Endpoints
 
@@ -215,31 +215,22 @@ request.user = {
 
 ## Integracao Externa
 
-A API publica externa ainda nao foi escolhida.
+A API publica escolhida e o GBIF.
 
-O ponto preparado para isso e:
+A implementacao fica em:
 
 ```text
 src/services/external-data.service.ts
 ```
 
-Hoje ele retorna `null`. Quando a API for escolhida, implementar `getSpeciesData` e gravar o retorno em `Species.externalData`.
+Ao cadastrar uma especie ou atualizar seu nome cientifico, `getSpeciesData` consulta:
 
-Boas opcoes futuras:
+- `GET /species/match`: resolve o nome na taxonomia do GBIF.
+- `GET /occurrence/search?limit=0`: busca somente a contagem de ocorrencias do taxon encontrado.
 
-- Clima por latitude/longitude
-- Geolocalizacao reversa
-- Dados ambientais
-- Alguma API publica relacionada a biodiversidade
+O retorno e salvo em `Species.externalData`. Se o GBIF estiver indisponivel ou retornar erro, o servico retorna `null` para nao bloquear o cadastro da especie.
 
-## Banco Local
-
-O `docker-compose.yml` sobe um PostgreSQL local:
-
-- usuario: `desafio`
-- senha: `desafio`
-- database: `especies`
-- porta: `5432`
+O GBIF recomenda configurar um `User-Agent` identificavel usando URL ou email de contato.
 
 ## Migration Inicial
 
@@ -258,11 +249,9 @@ Ela cria:
 
 ## Pendencias Planejadas
 
-- Escolher e implementar a API externa.
-- Adicionar testes unitarios ou de integracao.
-- Criar collection Insomnia/Postman se sobrar tempo.
+- Regra decidida: qualquer usuario autenticado pode editar/remover especies; nao ha ownership por criador para essas acoes.
+- Adicionar testes de integracao para rotas HTTP com banco se sobrar tempo.
 - Rodar `bun run db:generate` e `bun run db:migrate` em ambiente com Prisma engine disponivel.
-- Revisar ownership das especies se a regra exigir que apenas o criador edite/delete.
 
 ## Observacoes Importantes
 

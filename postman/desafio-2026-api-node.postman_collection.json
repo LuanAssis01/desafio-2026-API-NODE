@@ -1,0 +1,795 @@
+{
+  "info": {
+    "_postman_id": "0f9c1f93-4b35-4a8a-a095-9a9fbc16c7e3",
+    "name": "Desafio 2026 API Node",
+    "description": "Colecao Postman para testar healthcheck, autenticacao, CRUD de especies e chamadas externas ao GBIF.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('password')) {",
+          "  pm.collectionVariables.set('password', '12345678');",
+          "}",
+          "",
+          "if (!pm.collectionVariables.get('userName')) {",
+          "  pm.collectionVariables.set('userName', 'Luan');",
+          "}",
+          "",
+          "if (!pm.collectionVariables.get('gbifScientificName')) {",
+          "  pm.collectionVariables.set('gbifScientificName', 'Oreochromis niloticus');",
+          "}",
+          "",
+          "if (!pm.collectionVariables.get('gbifUserAgent')) {",
+          "  pm.collectionVariables.set('gbifUserAgent', 'desafio-2026-api-node/1.0');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('service is healthy', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('ok');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST /api/auth/register",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('email', `luan.${Date.now()}@example.com`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('returns user and token', function () {",
+                  "  pm.expect(body.user).to.be.an('object');",
+                  "  pm.expect(body.user.email).to.eql(pm.collectionVariables.get('email'));",
+                  "  pm.expect(body.token).to.be.a('string').and.not.empty;",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('token', body.token);",
+                  "pm.collectionVariables.set('userId', body.user.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{userName}}\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /api/auth/login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('returns user and token', function () {",
+                  "  pm.expect(body.user.email).to.eql(pm.collectionVariables.get('email'));",
+                  "  pm.expect(body.token).to.be.a('string').and.not.empty;",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('token', body.token);",
+                  "pm.collectionVariables.set('userId', body.user.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/auth/me",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('returns authenticated user', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.user.id).to.eql(pm.collectionVariables.get('userId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Species",
+      "item": [
+        {
+          "name": "GET /api/species",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('returns paginated list', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.items).to.be.an('array');",
+                  "  pm.expect(body.meta).to.be.an('object');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/species?page=1&perPage=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "species"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "perPage",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/species?category=peixe",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/species?category=peixe&page=1&perPage=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "species"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "peixe"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "perPage",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/species?q=tilapia",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/species?q=tilapia&page=1&perPage=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "species"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "tilapia"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "perPage",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/species/stats",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('returns stats array', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.stats).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/species/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "species",
+                "stats"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /api/species",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('returns created species', function () {",
+                  "  pm.expect(body.species.id).to.be.a('string').and.not.empty;",
+                  "  pm.expect(body.species.category).to.eql('peixe');",
+                  "});",
+                  "",
+                  "pm.test('stores GBIF external data', function () {",
+                  "  pm.expect(body.species.externalData).to.be.an('object');",
+                  "  pm.expect(body.species.externalData.provider).to.eql('GBIF');",
+                  "  pm.expect(body.species.externalData.data.match.scientificName).to.be.a('string').and.not.empty;",
+                  "  pm.expect(body.species.externalData.data.occurrence.totalRecords).to.be.a('number');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('speciesId', body.species.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"commonName\": \"Tilapia\",\n  \"scientificName\": \"Oreochromis niloticus\",\n  \"category\": \"peixe\",\n  \"latitude\": -3.7319,\n  \"longitude\": -38.5267,\n  \"recordedAt\": \"{{$isoTimestamp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/species",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "species"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/species/:id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('returns selected species', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.species.id).to.eql(pm.collectionVariables.get('speciesId'));",
+                  "  pm.expect(body.species.externalData.provider).to.eql('GBIF');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/species/{{speciesId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "species",
+                "{{speciesId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT /api/species/:id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('updates selected species', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.species.commonName).to.eql('Tilapia atualizada');",
+                  "  pm.expect(body.species.externalData.provider).to.eql('GBIF');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"commonName\": \"Tilapia atualizada\",\n  \"scientificName\": \"Oreochromis niloticus\",\n  \"category\": \"peixe\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/species/{{speciesId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "species",
+                "{{speciesId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE /api/species/:id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('returns deleted species', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.message).to.eql('Especie removida com sucesso.');",
+                  "  pm.expect(body.species.id).to.eql(pm.collectionVariables.get('speciesId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/species/{{speciesId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "species",
+                "{{speciesId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "GBIF",
+      "item": [
+        {
+          "name": "GET /species/match",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "const taxonKey = body.usageKey || body.acceptedUsageKey || body.speciesKey;",
+                  "",
+                  "pm.test('matches scientific name in GBIF', function () {",
+                  "  pm.expect(taxonKey).to.be.a('number');",
+                  "  pm.expect(body.scientificName).to.be.a('string').and.not.empty;",
+                  "  pm.expect(body.matchType).to.be.a('string').and.not.empty;",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('gbifTaxonKey', String(taxonKey));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "User-Agent",
+                "value": "{{gbifUserAgent}}"
+              }
+            ],
+            "url": {
+              "raw": "{{gbifBaseUrl}}/species/match?name={{gbifScientificName}}&verbose=true",
+              "host": [
+                "{{gbifBaseUrl}}"
+              ],
+              "path": [
+                "species",
+                "match"
+              ],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "{{gbifScientificName}}"
+                },
+                {
+                  "key": "verbose",
+                  "value": "true"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /occurrence/search?limit=0",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('returns occurrence count only', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.count).to.be.a('number');",
+                  "  pm.expect(body.results).to.be.an('array').that.is.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "User-Agent",
+                "value": "{{gbifUserAgent}}"
+              }
+            ],
+            "url": {
+              "raw": "{{gbifBaseUrl}}/occurrence/search?taxonKey={{gbifTaxonKey}}&limit=0",
+              "host": [
+                "{{gbifBaseUrl}}"
+              ],
+              "path": [
+                "occurrence",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "taxonKey",
+                  "value": "{{gbifTaxonKey}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3333"
+    },
+    {
+      "key": "gbifBaseUrl",
+      "value": "https://api.gbif.org/v1"
+    },
+    {
+      "key": "gbifScientificName",
+      "value": "Oreochromis niloticus"
+    },
+    {
+      "key": "gbifTaxonKey",
+      "value": "4285694"
+    },
+    {
+      "key": "gbifUserAgent",
+      "value": "desafio-2026-api-node/1.0"
+    },
+    {
+      "key": "userName",
+      "value": "Luan"
+    },
+    {
+      "key": "email",
+      "value": ""
+    },
+    {
+      "key": "password",
+      "value": "12345678"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "speciesId",
+      "value": ""
+    }
+  ]
+}
